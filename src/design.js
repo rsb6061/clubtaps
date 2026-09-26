@@ -1,4 +1,5 @@
 import { BASE_URL } from "./club.js";
+import { combineSchema } from "./seo.js";
 
 export const esc = (v="") => String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 export const attr = (v="") => esc(v).replace(/\n/g," ");
@@ -87,15 +88,20 @@ export function page(body, env={}, {
   canonical="/",
   jsonLd=null,
   robots="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1",
-  script=""
+  script="",
+  image=null,
+  alternateJson=null,
+  dateModified=null
 }={}) {
   const canonicalUrl=canonical.startsWith("http")?canonical:BASE_URL+canonical;
+  const schema=combineSchema(jsonLd);
+  const socialImage=image && image.startsWith("http") ? image : image ? BASE_URL+image : null;
   return new Response(`<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=5"><link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5"><link rel="apple-touch-icon" href="/favicon.png?v=5">
 <title>${esc(title)}</title><meta name="description" content="${attr(metaText(description))}"><meta name="robots" content="${attr(robots)}">${env.GOOGLE_SITE_VERIFICATION?`<meta name="google-site-verification" content="${attr(env.GOOGLE_SITE_VERIFICATION)}">`:""}
-<link rel="canonical" href="${attr(canonicalUrl)}"><meta property="og:site_name" content="ClubTaps"><meta property="og:title" content="${attr(title)}"><meta property="og:description" content="${attr(metaText(description))}"><meta property="og:url" content="${attr(canonicalUrl)}"><meta property="og:type" content="website"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="${attr(title)}"><meta name="twitter:description" content="${attr(metaText(description))}">
-${jsonLd?`<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g,"\\u003c")}</script>`:""}${analytics(env)}
+<link rel="canonical" href="${attr(canonicalUrl)}">${alternateJson?`<link rel="alternate" type="application/json" href="${attr(alternateJson)}">`:""}<meta property="og:site_name" content="ClubTaps"><meta property="og:title" content="${attr(title)}"><meta property="og:description" content="${attr(metaText(description))}"><meta property="og:url" content="${attr(canonicalUrl)}"><meta property="og:type" content="website">${socialImage?`<meta property="og:image" content="${attr(socialImage)}"><meta property="og:image:alt" content="${attr(title)}">`:""}<meta name="twitter:card" content="${socialImage?"summary_large_image":"summary"}"><meta name="twitter:title" content="${attr(title)}"><meta name="twitter:description" content="${attr(metaText(description))}">${socialImage?`<meta name="twitter:image" content="${attr(socialImage)}">`:""}${dateModified?`<meta property="article:modified_time" content="${attr(dateModified)}">`:""}
+<script type="application/ld+json">${JSON.stringify(schema).replace(/</g,"\\u003c")}</script>${analytics(env)}
 <style>${css()}</style></head><body>
 <header class="site-header"><div class="wrap"><div class="header-inner">
 <a class="brand" href="/"><img src="/favicon.png?v=5" alt="">ClubTaps</a>
