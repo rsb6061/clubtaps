@@ -81,8 +81,9 @@ export async function publicSearch(env,url) {
   if(clubType){clauses.push("club_type=?");binds.push(clubType)}
   if(membershipStatus){clauses.push("membership_status=?");binds.push(membershipStatus)}
   if(accessMap[access])clauses.push(accessMap[access]+"=1");
-  const maxDues=Number(sp.get("maxDues"));
-  if(Number.isFinite(maxDues)&&maxDues>=0){clauses.push("COALESCE(dues_max,dues_min) IS NOT NULL AND COALESCE(dues_max,dues_min)<=?");binds.push(maxDues)}
+  const maxDuesRaw=sp.get("maxDues");
+  const maxDues=maxDuesRaw==null||maxDuesRaw===""?null:Number(maxDuesRaw);
+  if(maxDues!=null&&Number.isFinite(maxDues)&&maxDues>=0){clauses.push("COALESCE(dues_max,dues_min) IS NOT NULL AND COALESCE(dues_max,dues_min)<=?");binds.push(maxDues)}
   if(q){
     const like="%"+q+"%";
     clauses.push("(LOWER(name) LIKE ? OR LOWER(COALESCE(city,'')) LIKE ? OR LOWER(COALESCE(state_code,'')) LIKE ? OR LOWER(COALESCE(description,'')) LIKE ? OR LOWER(COALESCE(amenities,'')) LIKE ?)");
