@@ -1,0 +1,14 @@
+{
+  "name": "clubtaps",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler d1 migrations apply clubtaps-db --remote && wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply clubtaps-db --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}
