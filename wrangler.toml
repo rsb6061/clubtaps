@@ -7,5 +7,13 @@ binding = "DB"
 database_name = "clubtaps-db"
 database_id = "828edf68-3d35-4618-a060-bba37c3b228b"
 
+[[routes]]
+pattern = "clubtaps.com/*"
+zone_name = "clubtaps.com"
+
+[[routes]]
+pattern = "www.clubtaps.com/*"
+zone_name = "clubtaps.com"
+
 [observability]
 enabled = true
