@@ -5,7 +5,7 @@ compatibility_date = "2026-09-25"
 [[d1_databases]]
 binding = "DB"
 database_name = "clubtaps-db"
-database_id = "REPLACE_AFTER_PROVISION"
+database_id = "828edf68-3d35-4618-a060-bba37c3b228b"
 
 [observability]
 enabled = true
