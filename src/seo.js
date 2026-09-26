@@ -48,24 +48,29 @@ export function combineSchema(pageSchema) {
 
 export function clubMeta(c) {
   const location=[c.city,c.state_code].filter(Boolean).join(", ");
-  const title=c.seo_title || `${c.name} Membership, Dues & Availability | ClubTaps`;
+  let title=`${c.name} Membership, Dues & Fees | ClubTaps`;
+  if(title.length>68) title=`${c.name} Membership & Dues | ClubTaps`;
+  if(title.length>72) title=`${c.name} Membership | ClubTaps`;
+
   const facts=[];
-  if(c.membership_status) facts.push(c.membership_status==="inquiry_only"?"membership availability requires contacting the club":`membership is listed as ${pretty(c.membership_status).toLowerCase()}`);
-  if(c.dues_min!=null||c.dues_max!=null) facts.push(`published dues are ${moneyRange(c.dues_min,c.dues_max)}`);
-  if(c.initiation_fee_min!=null||c.initiation_fee_max!=null) facts.push(`initiation fees are ${moneyRange(c.initiation_fee_min,c.initiation_fee_max)}`);
+  if(c.membership_status) facts.push(c.membership_status==="inquiry_only"?"contact the club for current membership availability":`membership is listed as ${pretty(c.membership_status).toLowerCase()}`);
+  if(c.dues_min!=null||c.dues_max!=null) facts.push(`public dues ${moneyRange(c.dues_min,c.dues_max)}`);
+  if(c.initiation_fee_min!=null||c.initiation_fee_max!=null) facts.push(`initiation fee ${moneyRange(c.initiation_fee_min,c.initiation_fee_max)}`);
   const wait=formatWait(c.wait_estimate_min_months,c.wait_estimate_max_months);
-  if(wait) facts.push(`documented wait is ${wait}`);
-  if(c.guest_access===true) facts.push("guest access is documented");
-  if(c.lap_swim===true) facts.push("lap swimming is documented");
-  const lead=`See ${c.name}${location?` in ${location}`:""} membership details`;
-  const description=c.seo_description || `${lead}: ${facts.length?facts.slice(0,3).join("; "):"dues, joining requirements, access and amenities where publicly sourced"}. ClubTaps does not estimate missing private-club data.`;
+  if(wait) facts.push(`documented wait ${wait}`);
+  if(c.guest_access===true) facts.push("guest access documented");
+  if(c.lap_swim===true) facts.push("lap swimming documented");
+
+  let description=`${c.name}${location?` in ${location}`:""} membership: ${facts.length?facts.slice(0,3).join("; "):"see source-backed dues, fees, availability, joining requirements, access and amenities where public"}.`;
+  if(description.length<125) description+=" ClubTaps does not estimate missing private-club data.";
   return {title,description};
 }
 
 export function cityMeta(guide,clubs,open,priced) {
   const count=clubs.length;
-  const title=`Private & Swim Clubs in ${guide.label}: Membership & Dues | ClubTaps`;
-  const description=`Compare ${count} private and swim clubs in ${guide.label}. See membership status, public dues, wait information, pools, guest access and source-backed joining details; ${open} are listed as open or limited and ${priced} publish dues.`;
+  let title=`${guide.label} Private Clubs: Membership & Dues | ClubTaps`;
+  if(title.length>68) title=`${guide.label} Private Clubs | ClubTaps`;
+  const description=`Compare ${count} private and swim clubs in ${guide.label}: membership availability, public dues, wait information, pools, guest access, amenities and source-backed joining details.`;
   return {title,description};
 }
 
