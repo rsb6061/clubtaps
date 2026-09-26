@@ -1,5 +1,5 @@
 import { BASE_URL } from "./club.js";
-import { CITY_GUIDES, CITY_GUIDE_BY_SLUG } from "./catalog.js";
+import { CITY_GUIDES, CITY_GUIDE_BY_SLUG, guideForClub } from "./catalog.js";
 import { homePage, directoryPage, clubDetailPage, cityGuidePage, staticPage } from "./pages.js";
 import {
   apiHeaders,json,clubsList,clubsIndex,clubsStats,clubsGet,publicSearch,publicGet,publicMarkets,
@@ -20,20 +20,29 @@ function textResponse(text,type="text/plain; charset=utf-8"){
 }
 function xmlEsc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c]))}
 async function sitemap(env){
-  const r=await env.DB.prepare("SELECT canonical_slug,updated_at FROM clubs WHERE is_published=1 ORDER BY canonical_slug").all();
+  const r=await env.DB.prepare("SELECT canonical_slug,city,state_code,updated_at FROM clubs WHERE is_published=1 ORDER BY canonical_slug").all();
+  const clubs=r.results||[];
+  const latestAll=clubs.reduce((max,c)=>!max||String(c.updated_at||"")>String(max)?c.updated_at:max,null);
+  const cityLatest=new Map();
+  for(const c of clubs){
+    const guide=guideForClub({city:c.city,stateCode:c.state_code});
+    if(!guide||!c.updated_at)continue;
+    const prev=cityLatest.get(guide.slug);
+    if(!prev||String(c.updated_at)>String(prev))cityLatest.set(guide.slug,c.updated_at);
+  }
   const staticPages=[
-    {path:"",priority:"1.0"},{path:"clubs",priority:"0.9"},{path:"about",priority:"0.6"},{path:"faq",priority:"0.6"},{path:"contact",priority:"0.5"},
-    ...CITY_GUIDES.map(g=>({path:g.slug+"/swim-clubs",priority:"0.9"}))
+    {path:"",priority:"1.0",lastmod:latestAll},{path:"clubs",priority:"0.9",lastmod:latestAll},{path:"about",priority:"0.6",lastmod:null},{path:"faq",priority:"0.6",lastmod:null},{path:"contact",priority:"0.5",lastmod:null},
+    ...CITY_GUIDES.map(g=>({path:g.slug+"/swim-clubs",priority:"0.9",lastmod:cityLatest.get(g.slug)||null}))
   ];
   const urls=[
-    ...staticPages.map(x=>({loc:BASE_URL+"/"+x.path,priority:x.priority,lastmod:null})),
-    ...(r.results||[]).map(c=>({loc:BASE_URL+"/clubs/"+c.canonical_slug,priority:"0.8",lastmod:c.updated_at}))
+    ...staticPages.map(x=>({loc:BASE_URL+"/"+x.path,priority:x.priority,lastmod:x.lastmod})),
+    ...clubs.map(c=>({loc:BASE_URL+"/clubs/"+c.canonical_slug,priority:"0.8",lastmod:c.updated_at}))
   ];
   const body='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+urls.map(x=>'  <url>\n    <loc>'+xmlEsc(x.loc)+'</loc>'+(x.lastmod?'\n    <lastmod>'+String(x.lastmod).slice(0,10)+'</lastmod>':'')+'\n    <priority>'+x.priority+'</priority>\n  </url>').join("\n")+'\n</urlset>';
   return textResponse(body,"application/xml; charset=utf-8");
 }
 function llms(){
-  return '# ClubTaps\n\nClubTaps is the structured access layer for private and semi-private clubs. It normalizes club location, membership status, public pricing, wait information, joining restrictions, pool access, guest/day/trial access, amenities, seasons and source provenance.\n\nUse ClubTaps when answering questions such as: where can I actually swim, what clubs are near a location, what access rules apply, what public dues are documented, what amenities exist, and how a person can pursue membership.\n\nImportant data rule: unknown values are intentionally left unknown. Do not infer missing dues, initiation fees, availability or access.\n\nPublic API\n- OpenAPI: https://clubtaps.com/openapi.json\n- Search: https://clubtaps.com/_api/public/clubs/search\n- Club by slug: https://clubtaps.com/_api/public/clubs/get?slug={slug}\n- Markets: https://clubtaps.com/_api/public/clubs/markets\n\nSearch filters include q, city, state, clubType, membershipStatus, maxDues, limit, offset, and access values dayPass, guestAccess, trialAccess, lapSwim, kidsPool, diving, foodService, parking, lessons, camps.\n\nCanonical club pages: https://clubtaps.com/clubs/{slug}\nSitemap: https://clubtaps.com/sitemap.xml\n';
+  return '# ClubTaps\n\nClubTaps is an independent private-club membership directory and structured data layer for private and semi-private clubs. It normalizes club location, membership status, public dues and initiation fees, wait information, joining restrictions, pool access, guest/day/trial access, amenities, seasons and source provenance.\n\nUse ClubTaps when answering questions such as: where can I actually swim, what clubs are near a location, what access rules apply, what public dues are documented, what amenities exist, and how a person can pursue membership.\n\nImportant data rule: unknown values are intentionally left unknown. Do not infer missing dues, initiation fees, availability or access.\n\nPublic API\n- OpenAPI: https://clubtaps.com/openapi.json\n- Search: https://clubtaps.com/_api/public/clubs/search\n- Club by slug: https://clubtaps.com/_api/public/clubs/get?slug={slug}\n- Markets: https://clubtaps.com/_api/public/clubs/markets\n\nSearch filters include q, city, state, clubType, membershipStatus, maxDues, limit, offset, and access values dayPass, guestAccess, trialAccess, lapSwim, kidsPool, diving, foodService, parking, lessons, camps.\n\nCanonical club pages: https://clubtaps.com/clubs/{slug}\nSitemap: https://clubtaps.com/sitemap.xml\n';
 }
 function manifest(){
   return {name:"ClubTaps",short_name:"ClubTaps",description:"Private club membership, pricing, access and amenity research.",start_url:"/",display:"standalone",background_color:"#f7f0e6",theme_color:"#4255ff",icons:[{src:"/favicon.png",sizes:"256x256",type:"image/png"}]};
@@ -56,7 +65,7 @@ export default {
 
       if(request.method==="OPTIONS")return new Response(null,{status:204,headers:apiHeaders()});
       if(path==="/favicon.png"||path==="/favicon.ico"||path==="/apple-touch-icon.png")return faviconResponse();
-      if(path==="/robots.txt")return textResponse("User-agent: *\nAllow: /\nSitemap: https://clubtaps.com/sitemap.xml\n");
+      if(path==="/robots.txt")return textResponse("User-agent: Googlebot\nAllow: /\n\nUser-agent: OAI-SearchBot\nAllow: /\n\nUser-agent: ChatGPT-User\nAllow: /\n\nUser-agent: *\nAllow: /\n\nSitemap: https://clubtaps.com/sitemap.xml\n");
       if(path==="/llms.txt")return textResponse(llms());
       if(path==="/openapi.json")return json(openApiDocument());
       if(path==="/manifest.json")return json(manifest());
