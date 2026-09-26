@@ -106,8 +106,9 @@ export async function clubDetailPage(env,slug){
   const guide=guideForClub({city:c.city,stateCode:c.state_code});
   const dues=moneyRange(c.dues_min,c.dues_max),initiation=moneyRange(c.initiation_fee_min,c.initiation_fee_max),wait=formatWait(c.wait_estimate_min_months,c.wait_estimate_max_months);
   const location=[c.city,c.state_code].filter(Boolean).join(", ");
-  const title=c.seo_title||c.name+" Membership, Dues & Amenities | ClubTaps";
-  const description=c.seo_description||("Explore membership information, amenities and joining details for "+c.name+(location?" in "+location:"")+".");
+  const meta=clubMeta(c);
+  const title=meta.title;
+  const description=meta.description;
   const seasonOpen=dateFmt(c.season_open_date),seasonClose=dateFmt(c.season_close_date),hours=hoursLines(c.operating_hours);
   const access=[
     c.day_pass_available!=null?["Day passes",c.day_pass_available?(c.day_pass_price!=null?"Yes · $"+c.day_pass_price:"Available"):"Not publicly offered"]:null,
@@ -154,8 +155,20 @@ export async function clubDetailPage(env,slug){
     '<div class="detail-card"><div class="eyebrow">At a glance</div><div><span class="pill">'+esc(dues)+'</span><span class="pill">'+esc(statusLabel(c.membership_status))+'</span>'+(c.guest_access?'<span class="pill">Guest access</span>':"")+(c.lap_swim?'<span class="pill">Lap swim</span>':"")+'</div></div></div></aside></div></section>';
 
   const canonical=BASE_URL+"/clubs/"+c.canonical_slug;
-  const structured={"@context":"https://schema.org","@graph":[{"@type":"SportsActivityLocation","@id":canonical+"#club",name:c.name,description:c.description||description,url:canonical,sameAs:c.website||undefined,telephone:c.phone||undefined,address:c.address?{"@type":"PostalAddress",streetAddress:c.address,addressLocality:c.city||undefined,addressRegion:c.state_code||undefined}:undefined,amenityFeature:[c.lap_swim===true?"Lap swimming":null,c.kids_pool===true?"Kids pool":null,c.diving===true?"Diving":null,c.food_service===true?"Food service":null,c.lessons===true?"Swim lessons":null,c.camps===true?"Camps":null,c.parking===true?"Parking":null].filter(Boolean).map(function(name){return {"@type":"LocationFeatureSpecification",name:name,value:true}})},{"@type":"WebPage","@id":canonical+"#webpage",url:canonical,name:title,description:description,about:{"@id":canonical+"#club"},breadcrumb:{"@type":"BreadcrumbList",itemListElement:[{"@type":"ListItem",position:1,name:"ClubTaps",item:BASE_URL+"/"},{"@type":"ListItem",position:2,name:c.name,item:canonical}]}}]};
-  return page(body,env,{title:title,description:description,canonical:"/clubs/"+c.canonical_slug,jsonLd:structured,script:clientScript()});
+  const structured={"@context":"https://schema.org","@graph":[
+    {"@type":"SportsActivityLocation","@id":canonical+"#club",name:c.name,description:c.description||description,url:canonical,sameAs:c.website||undefined,telephone:c.phone||undefined,image:c.cover_image_url||undefined,
+      address:(c.address||c.city||c.state_code)?{"@type":"PostalAddress",streetAddress:c.address||undefined,addressLocality:c.city||undefined,addressRegion:c.state_code||undefined,postalCode:c.zip_code||undefined,addressCountry:c.country_code||"US"}:undefined,
+      geo:(c.lat!=null&&c.lng!=null)?{"@type":"GeoCoordinates",latitude:c.lat,longitude:c.lng}:undefined,
+      amenityFeature:[c.lap_swim===true?"Lap swimming":null,c.kids_pool===true?"Kids pool":null,c.diving===true?"Diving":null,c.food_service===true?"Food service":null,c.lessons===true?"Swim lessons":null,c.camps===true?"Camps":null,c.parking===true?"Parking":null].filter(Boolean).map(function(name){return {"@type":"LocationFeatureSpecification",name:name,value:true}})
+    },
+    {"@type":"WebPage","@id":canonical+"#webpage",url:canonical,name:title,description:description,dateModified:c.updated_at||undefined,isPartOf:{"@id":WEBSITE_ID},publisher:{"@id":ORG_ID},about:{"@id":canonical+"#club"}},
+    {"@type":"BreadcrumbList","@id":canonical+"#breadcrumb","itemListElement":[
+      {"@type":"ListItem","position":1,"name":"ClubTaps","item":BASE_URL+"/"},
+      {"@type":"ListItem","position":2,"name":"Private clubs","item":BASE_URL+"/clubs"},
+      {"@type":"ListItem","position":3,"name":c.name,"item":canonical}
+    ]}
+  ]};
+  return page(body,env,{title:title,description:description,canonical:"/clubs/"+c.canonical_slug,jsonLd:structured,image:c.cover_image_url||null,alternateJson:BASE_URL+"/_api/public/clubs/get?slug="+encodeURIComponent(c.canonical_slug),dateModified:c.updated_at||null,script:clientScript()});
 }
 
 export async function cityGuidePage(env,slug){
