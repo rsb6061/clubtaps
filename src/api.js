@@ -9,6 +9,7 @@ export function apiHeaders(extra={}) {
     "access-control-allow-headers":"Content-Type",
     "link":'<https://clubtaps.com/openapi.json>; rel="service-desc"',
     "cache-control":"public, max-age=60, s-maxage=300",
+    "x-robots-tag":"noindex, follow",
     ...extra
   };
 }
